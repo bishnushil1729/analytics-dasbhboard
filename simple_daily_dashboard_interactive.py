@@ -107,10 +107,12 @@ for gran in granularities:
     df_f, _ = aggregate_by_granularity(df_funnel, 'dt', gran)
 
     # For adoption rate, use average within period
-    daily_adoption = df_f.groupby('period').agg({
-        'attempted_flag': lambda x: (x == 1).sum(),
-        'spl_code': lambda x: x[df_f.loc[x.index, 'attempted_flag'] == 1].nunique()
-    }).reset_index()
+    daily_adoption = df_f.groupby('period').apply(
+        lambda group: pd.Series({
+            'attempted_count': (group['attempted_flag'] == 1).sum(),
+            'attempted_agents': group[group['attempted_flag'] == 1]['spl_code'].nunique()
+        })
+    ).reset_index()
     daily_adoption.columns = ['date', 'attempted_count', 'attempted_agents']
 
     # Total existing agents (cumulative)
