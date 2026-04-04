@@ -981,6 +981,87 @@ def format_pct(val):
     else:
         return f"{val:.2f}% ➡️"
 
+# Calculate KPI Summary Stats
+from datetime import datetime, timedelta
+
+today = df_tickets['ticket_created_date'].max()
+current_month_start = today.replace(day=1)
+current_day_of_month = today.day
+
+# Last month dates
+last_month_end = current_month_start - timedelta(days=1)
+last_month_start = last_month_end.replace(day=1)
+
+# MTD periods
+mtd_tickets = df_tickets[(df_tickets['ticket_created_date'] >= current_month_start) &
+                          (df_tickets['ticket_created_date'] <= today)]
+mtd_funnel = df_funnel[(df_funnel['dt'] >= pd.Timestamp(current_month_start)) &
+                        (df_funnel['dt'] <= pd.Timestamp(today))]
+
+# Last Month (full)
+last_month_tickets = df_tickets[(df_tickets['ticket_created_date'] >= last_month_start) &
+                                 (df_tickets['ticket_created_date'] <= last_month_end)]
+last_month_funnel = df_funnel[(df_funnel['dt'] >= pd.Timestamp(last_month_start)) &
+                               (df_funnel['dt'] <= pd.Timestamp(last_month_end))]
+
+# Last Month Till Date (same day as today)
+lmtd_end = last_month_start + timedelta(days=current_day_of_month - 1)
+lmtd_tickets = df_tickets[(df_tickets['ticket_created_date'] >= last_month_start) &
+                           (df_tickets['ticket_created_date'] <= lmtd_end)]
+lmtd_funnel = df_funnel[(df_funnel['dt'] >= pd.Timestamp(last_month_start)) &
+                         (df_funnel['dt'] <= pd.Timestamp(lmtd_end))]
+
+# Previous Day
+previous_day = today - timedelta(days=1)
+prev_day_tickets = df_tickets[df_tickets['ticket_created_date'] == previous_day]
+prev_day_funnel = df_funnel[df_funnel['dt'] == pd.Timestamp(previous_day)]
+
+# Current Week (week starting Monday)
+current_week_start = today - timedelta(days=today.weekday())
+current_week_tickets = df_tickets[(df_tickets['ticket_created_date'] >= current_week_start) &
+                                   (df_tickets['ticket_created_date'] <= today)]
+current_week_funnel = df_funnel[(df_funnel['dt'] >= pd.Timestamp(current_week_start)) &
+                                 (df_funnel['dt'] <= pd.Timestamp(today))]
+
+# Last Week (complete week)
+last_week_end = current_week_start - timedelta(days=1)
+last_week_start = last_week_end - timedelta(days=6)
+last_week_tickets = df_tickets[(df_tickets['ticket_created_date'] >= last_week_start) &
+                                (df_tickets['ticket_created_date'] <= last_week_end)]
+last_week_funnel = df_funnel[(df_funnel['dt'] >= pd.Timestamp(last_week_start)) &
+                               (df_funnel['dt'] <= pd.Timestamp(last_week_end))]
+
+# Calculate metrics
+def calc_metrics(tickets_df, funnel_df):
+    total_tickets = len(tickets_df)
+    total_tasks = tickets_df['task_id'].nunique() if len(tickets_df) > 0 else 0
+    closed_tickets = tickets_df['flag_ticket_closed'].sum() if len(tickets_df) > 0 else 0
+    closure_rate = (closed_tickets / total_tickets * 100) if total_tickets > 0 else 0
+
+    # Calculate unique agents who attempted
+    agents_attempted = funnel_df[funnel_df['attempted_flag'] == 1]['spl_code'].nunique() if len(funnel_df) > 0 else 0
+
+    # Calculate total unique agents (matching chart logic)
+    total_unique_agents = funnel_df['spl_code'].nunique() if len(funnel_df) > 0 else 0
+
+    # Adoption rate: unique agents attempted / total unique agents (matching chart calculation)
+    adoption_rate = (agents_attempted / total_unique_agents * 100) if total_unique_agents > 0 else 0
+
+    return {
+        'total_tickets': total_tickets,
+        'total_tasks': total_tasks,
+        'closure_rate': round(closure_rate, 2),
+        'adoption_rate': round(adoption_rate, 2),
+        'agents_attempted': agents_attempted
+    }
+
+kpi_mtd = calc_metrics(mtd_tickets, mtd_funnel)
+kpi_last_month = calc_metrics(last_month_tickets, last_month_funnel)
+kpi_lmtd = calc_metrics(lmtd_tickets, lmtd_funnel)
+kpi_prev_day = calc_metrics(prev_day_tickets, prev_day_funnel)
+kpi_current_week = calc_metrics(current_week_tickets, current_week_funnel)
+kpi_last_week = calc_metrics(last_week_tickets, last_week_funnel)
+
 # Build MTD comparison from calculated metrics
 mtd_comparison_data = [
     {
@@ -1802,7 +1883,7 @@ for hub in df_tickets['hub_normalized'].dropna().unique():
     hub_funnel = df_funnel[df_funnel['hub'] == hub]
     if len(hub_funnel) > 0:
         attempted_count = hub_funnel['attempted_flag'].sum()
-        logged_in_count = hub_funnel['logged_in'].sum()
+        logged_in_count = hub_funnel['logged_in_flag'].sum()
         adoption_rate = (attempted_count / logged_in_count * 100) if logged_in_count > 0 else 0
     else:
         adoption_rate = 0
@@ -2150,87 +2231,6 @@ print(f"✅ Created ticket status by flow table (last 60 days: {len(df_status_fl
 # CREATE HTML DASHBOARD
 # =============================================================================
 print("\n📝 Generating interactive HTML dashboard...")
-
-# Calculate KPI Summary Stats
-from datetime import datetime, timedelta
-
-today = df_tickets['ticket_created_date'].max()
-current_month_start = today.replace(day=1)
-current_day_of_month = today.day
-
-# Last month dates
-last_month_end = current_month_start - timedelta(days=1)
-last_month_start = last_month_end.replace(day=1)
-
-# MTD periods
-mtd_tickets = df_tickets[(df_tickets['ticket_created_date'] >= current_month_start) &
-                          (df_tickets['ticket_created_date'] <= today)]
-mtd_funnel = df_funnel[(df_funnel['dt'] >= pd.Timestamp(current_month_start)) &
-                        (df_funnel['dt'] <= pd.Timestamp(today))]
-
-# Last Month (full)
-last_month_tickets = df_tickets[(df_tickets['ticket_created_date'] >= last_month_start) &
-                                 (df_tickets['ticket_created_date'] <= last_month_end)]
-last_month_funnel = df_funnel[(df_funnel['dt'] >= pd.Timestamp(last_month_start)) &
-                               (df_funnel['dt'] <= pd.Timestamp(last_month_end))]
-
-# Last Month Till Date (same day as today)
-lmtd_end = last_month_start + timedelta(days=current_day_of_month - 1)
-lmtd_tickets = df_tickets[(df_tickets['ticket_created_date'] >= last_month_start) &
-                           (df_tickets['ticket_created_date'] <= lmtd_end)]
-lmtd_funnel = df_funnel[(df_funnel['dt'] >= pd.Timestamp(last_month_start)) &
-                         (df_funnel['dt'] <= pd.Timestamp(lmtd_end))]
-
-# Previous Day
-previous_day = today - timedelta(days=1)
-prev_day_tickets = df_tickets[df_tickets['ticket_created_date'] == previous_day]
-prev_day_funnel = df_funnel[df_funnel['dt'] == pd.Timestamp(previous_day)]
-
-# Current Week (week starting Monday)
-current_week_start = today - timedelta(days=today.weekday())
-current_week_tickets = df_tickets[(df_tickets['ticket_created_date'] >= current_week_start) &
-                                   (df_tickets['ticket_created_date'] <= today)]
-current_week_funnel = df_funnel[(df_funnel['dt'] >= pd.Timestamp(current_week_start)) &
-                                 (df_funnel['dt'] <= pd.Timestamp(today))]
-
-# Last Week (complete week)
-last_week_end = current_week_start - timedelta(days=1)
-last_week_start = last_week_end - timedelta(days=6)
-last_week_tickets = df_tickets[(df_tickets['ticket_created_date'] >= last_week_start) &
-                                (df_tickets['ticket_created_date'] <= last_week_end)]
-last_week_funnel = df_funnel[(df_funnel['dt'] >= pd.Timestamp(last_week_start)) &
-                               (df_funnel['dt'] <= pd.Timestamp(last_week_end))]
-
-# Calculate metrics
-def calc_metrics(tickets_df, funnel_df):
-    total_tickets = len(tickets_df)
-    total_tasks = tickets_df['task_id'].nunique() if len(tickets_df) > 0 else 0
-    closed_tickets = tickets_df['flag_ticket_closed'].sum() if len(tickets_df) > 0 else 0
-    closure_rate = (closed_tickets / total_tickets * 100) if total_tickets > 0 else 0
-
-    # Calculate unique agents who attempted
-    agents_attempted = funnel_df[funnel_df['attempted_flag'] == 1]['spl_code'].nunique() if len(funnel_df) > 0 else 0
-
-    # Calculate total unique agents (matching chart logic)
-    total_unique_agents = funnel_df['spl_code'].nunique() if len(funnel_df) > 0 else 0
-
-    # Adoption rate: unique agents attempted / total unique agents (matching chart calculation)
-    adoption_rate = (agents_attempted / total_unique_agents * 100) if total_unique_agents > 0 else 0
-
-    return {
-        'total_tickets': total_tickets,
-        'total_tasks': total_tasks,
-        'closure_rate': round(closure_rate, 2),
-        'adoption_rate': round(adoption_rate, 2),
-        'agents_attempted': agents_attempted
-    }
-
-kpi_mtd = calc_metrics(mtd_tickets, mtd_funnel)
-kpi_last_month = calc_metrics(last_month_tickets, last_month_funnel)
-kpi_lmtd = calc_metrics(lmtd_tickets, lmtd_funnel)
-kpi_prev_day = calc_metrics(prev_day_tickets, prev_day_funnel)
-kpi_current_week = calc_metrics(current_week_tickets, current_week_funnel)
-kpi_last_week = calc_metrics(last_week_tickets, last_week_funnel)
 
 # Legacy stats for compatibility
 df_daily_summary = all_metrics['day']['daily']
