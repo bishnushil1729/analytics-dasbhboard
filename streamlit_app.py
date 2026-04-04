@@ -1,28 +1,15 @@
 import streamlit as st
 import subprocess
 from pathlib import Path
+import base64
 
 # Page configuration
 st.set_page_config(
     page_title="FE App Dashboard",
     page_icon="📊",
-    layout="wide",
-    initial_sidebar_state="collapsed"
+    layout="centered"
 )
 
-# Custom styling
-st.markdown("""
-    <style>
-        .main {
-            padding: 0;
-        }
-        iframe {
-            border: none;
-        }
-    </style>
-    """, unsafe_allow_html=True)
-
-# Main content
 st.title("📊 FE App Dashboard")
 
 # Check if HTML file exists, if not generate it
@@ -37,15 +24,37 @@ if not html_file.exists():
         st.error(f"❌ Error generating dashboard: {e}")
         st.stop()
 
-# Read and display the HTML dashboard
+# Read the HTML file
 try:
-    with open(html_file, "r", encoding="utf-8") as f:
-        html_content = f.read()
+    with open(html_file, "rb") as f:
+        html_bytes = f.read()
 
-    # Display the HTML dashboard
-    st.components.v1.html(html_content, height=5000, scrolling=True)
+    # Create download button
+    st.download_button(
+        label="📥 Download Dashboard (HTML)",
+        data=html_bytes,
+        file_name="dashboard.html",
+        mime="text/html",
+        use_container_width=True
+    )
+
+    st.markdown("---")
+    st.markdown("""
+    ### 📖 How to use:
+    1. Click the **"Download Dashboard"** button above
+    2. Open the downloaded HTML file in your browser
+    3. Enjoy the interactive dashboard with:
+       - 📊 KPI metrics and trends
+       - 📈 Interactive charts with zoom & pan
+       - 🎛️ Granularity controls (Daily/Weekly/Monthly/Yearly)
+       - 📅 Date range filters
+       - 🗺️ Regional performance views
+       - 📉 Top and bottom performers
+    """)
+
+    st.info("💡 The HTML file is self-contained - no internet connection needed to use it offline!")
 
 except FileNotFoundError:
-    st.error("❌ Dashboard HTML file not found. Please run simple_daily_dashboard_interactive.py first.")
+    st.error("❌ Dashboard HTML file not found.")
 except Exception as e:
-    st.error(f"❌ Error loading dashboard: {e}")
+    st.error(f"❌ Error: {e}")
