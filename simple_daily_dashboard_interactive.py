@@ -108,8 +108,8 @@ for gran in granularities:
 
     # For adoption rate, use average within period
     daily_adoption = df_f.groupby('period').agg({
-        'attempted': lambda x: (x == 1).sum(),
-        'agent_id': lambda x: x[df_f.loc[x.index, 'attempted'] == 1].nunique()
+        'attempted_flag': lambda x: (x == 1).sum(),
+        'spl_code': lambda x: x[df_f.loc[x.index, 'attempted_flag'] == 1].nunique()
     }).reset_index()
     daily_adoption.columns = ['date', 'attempted_count', 'attempted_agents']
 
@@ -118,7 +118,7 @@ for gran in granularities:
         seen_agents = set()
         total_agents_list = []
         for date in sorted(df_funnel['dt'].unique()):
-            date_agents = df_funnel[df_funnel['dt'] <= date]['agent_id'].unique()
+            date_agents = df_funnel[df_funnel['dt'] <= date]['spl_code'].unique()
             seen_agents.update(date_agents)
             total_agents_list.append({
                 'date': date,
@@ -133,7 +133,7 @@ for gran in granularities:
         for period in sorted(df_f['period'].unique()):
             period_agents = df_funnel[
                 aggregate_by_granularity(df_funnel, 'dt', gran)[0]['period'] <= period
-            ]['agent_id'].unique()
+            ]['spl_code'].unique()
             seen_agents.update(period_agents)
             total_agents_list.append({
                 'date': period,
@@ -627,7 +627,7 @@ for gran in granularities:
     df_funnel_agg, _ = aggregate_by_granularity(df_funnel, 'dt', gran)
 
     # Count unique agents per period
-    active_agents_by_period = df_funnel_agg.groupby('period')['agent_id'].nunique().reset_index()
+    active_agents_by_period = df_funnel_agg.groupby('period')['spl_code'].nunique().reset_index()
     active_agents_by_period.columns = ['date', 'active_agents']
     active_agents_by_period = active_agents_by_period.sort_values('date')
 
@@ -1693,7 +1693,7 @@ hub_metrics = []
 employee_hub_map = df_tickets.groupby('employee_code')['hub_normalized'].first().to_dict()
 
 # Add hub to funnel data
-df_funnel['hub'] = df_funnel['agent_id'].map(employee_hub_map)
+df_funnel['hub'] = df_funnel['spl_code'].map(employee_hub_map)
 
 for hub in df_tickets['hub_normalized'].dropna().unique():
     hub_df = df_tickets[df_tickets['hub_normalized'] == hub]
@@ -1713,7 +1713,7 @@ for hub in df_tickets['hub_normalized'].dropna().unique():
     # Calculate adoption rate from funnel data
     hub_funnel = df_funnel[df_funnel['hub'] == hub]
     if len(hub_funnel) > 0:
-        attempted_count = hub_funnel['attempted'].sum()
+        attempted_count = hub_funnel['attempted_flag'].sum()
         logged_in_count = hub_funnel['logged_in'].sum()
         adoption_rate = (attempted_count / logged_in_count * 100) if logged_in_count > 0 else 0
     else:
@@ -2121,10 +2121,10 @@ def calc_metrics(tickets_df, funnel_df):
     closure_rate = (closed_tickets / total_tickets * 100) if total_tickets > 0 else 0
 
     # Calculate unique agents who attempted
-    agents_attempted = funnel_df[funnel_df['attempted'] == 1]['agent_id'].nunique() if len(funnel_df) > 0 else 0
+    agents_attempted = funnel_df[funnel_df['attempted_flag'] == 1]['spl_code'].nunique() if len(funnel_df) > 0 else 0
 
     # Calculate total unique agents (matching chart logic)
-    total_unique_agents = funnel_df['agent_id'].nunique() if len(funnel_df) > 0 else 0
+    total_unique_agents = funnel_df['spl_code'].nunique() if len(funnel_df) > 0 else 0
 
     # Adoption rate: unique agents attempted / total unique agents (matching chart calculation)
     adoption_rate = (agents_attempted / total_unique_agents * 100) if total_unique_agents > 0 else 0
