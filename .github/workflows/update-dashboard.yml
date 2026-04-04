@@ -1,0 +1,65 @@
+name: Update FE App Dashboard Daily
+
+on:
+  # Run daily at 2 AM UTC (7:30 AM IST)
+  schedule:
+    - cron: '0 2 * * *'
+
+  # Allow manual trigger from GitHub UI
+  workflow_dispatch:
+
+jobs:
+  update-dashboard:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v3
+
+    - name: Setup Python 3.10
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.10'
+
+    - name: Install Python dependencies
+      run: |
+        pip install --upgrade pip
+        pip install pandas plotly trino-python-client
+
+    - name: Fetch ticket data from Trino
+      env:
+        TRINO_PASSWORD: ${{ secrets.TRINO_PASSWORD }}
+      run: |
+        echo "Fetching ticket data..."
+        python fetch_from_trino.py
+
+    - name: Fetch agent funnel data from Trino
+      env:
+        TRINO_PASSWORD: ${{ secrets.TRINO_PASSWORD }}
+      run: |
+        echo "Fetching agent funnel data..."
+        python fetch_agent_funnel_from_trino.py
+
+    - name: Transform funnel data
+      run: |
+        echo "Transforming funnel data..."
+        python transform_funnel_data.py
+
+    - name: Create MTD comparison views
+      run: |
+        echo "Creating MTD comparison views..."
+        python create_mtd_comparison_views.py
+
+    - name: Generate dashboard
+      run: |
+        echo "Generating dashboard HTML..."
+        python simple_daily_dashboard_interactive.py
+
+    - name: Deploy to GitHub Pages
+      uses: peaceiris/actions-gh-pages@v3
+      with:
+        github_token: ${{ secrets.GITHUB_TOKEN }}
+        publish_dir: .
+        publish_branch: gh-pages
+        keep_files: false
+        destination_dir: .
