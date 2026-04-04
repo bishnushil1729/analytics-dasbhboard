@@ -981,8 +981,38 @@ def format_pct(val):
     else:
         return f"{val:.2f}% ➡️"
 
-# Apply formatting for display
-mtd_tickets_display = df_mtd_tickets.copy()
+# Build MTD comparison from calculated metrics
+mtd_comparison_data = [
+    {
+        'metric': 'Total Tickets',
+        'current_mtd': kpi_mtd['total_tickets'],
+        'last_mtd': kpi_lmtd['total_tickets'],
+        'change': kpi_mtd['total_tickets'] - kpi_lmtd['total_tickets'],
+        'pct_change': ((kpi_mtd['total_tickets'] - kpi_lmtd['total_tickets']) / kpi_lmtd['total_tickets'] * 100) if kpi_lmtd['total_tickets'] > 0 else 0
+    },
+    {
+        'metric': 'Total Tasks',
+        'current_mtd': kpi_mtd['total_tasks'],
+        'last_mtd': kpi_lmtd['total_tasks'],
+        'change': kpi_mtd['total_tasks'] - kpi_lmtd['total_tasks'],
+        'pct_change': ((kpi_mtd['total_tasks'] - kpi_lmtd['total_tasks']) / kpi_lmtd['total_tasks'] * 100) if kpi_lmtd['total_tasks'] > 0 else 0
+    },
+    {
+        'metric': 'Closure Rate (%)',
+        'current_mtd': kpi_mtd['closure_rate'],
+        'last_mtd': kpi_lmtd['closure_rate'],
+        'change': kpi_mtd['closure_rate'] - kpi_lmtd['closure_rate'],
+        'pct_change': ((kpi_mtd['closure_rate'] - kpi_lmtd['closure_rate']) / kpi_lmtd['closure_rate'] * 100) if kpi_lmtd['closure_rate'] > 0 else 0
+    },
+    {
+        'metric': 'Adoption Rate (%)',
+        'current_mtd': kpi_mtd['adoption_rate'],
+        'last_mtd': kpi_lmtd['adoption_rate'],
+        'change': kpi_mtd['adoption_rate'] - kpi_lmtd['adoption_rate'],
+        'pct_change': ((kpi_mtd['adoption_rate'] - kpi_lmtd['adoption_rate']) / kpi_lmtd['adoption_rate'] * 100) if kpi_lmtd['adoption_rate'] > 0 else 0
+    }
+]
+mtd_tickets_display = pd.DataFrame(mtd_comparison_data)
 mtd_tickets_display['pct_change_display'] = mtd_tickets_display['pct_change'].apply(format_pct)
 
 fig_mtd1 = go.Figure(data=[go.Table(
@@ -1022,8 +1052,22 @@ fig_mtd1.update_layout(
 # Update MTD table colors to match theme
 fig_mtd1.data[0].header.fill.color = '#667eea'
 
-# MTD Table 2: Flow Comparison
-mtd_flow_display = df_mtd_flow.copy()
+# Build MTD Flow comparison from ticket data
+flows = mtd_tickets['flow'].unique()
+mtd_flow_data = []
+for flow in flows:
+    current_count = len(mtd_tickets[mtd_tickets['flow'] == flow])
+    last_count = len(lmtd_tickets[lmtd_tickets['flow'] == flow])
+    change = current_count - last_count
+    pct_change = ((current_count - last_count) / last_count * 100) if last_count > 0 else 0
+    mtd_flow_data.append({
+        'flow': flow,
+        'current_mtd': current_count,
+        'last_mtd': last_count,
+        'change': change,
+        'pct_change': pct_change
+    })
+mtd_flow_display = pd.DataFrame(mtd_flow_data)
 mtd_flow_display['pct_change_display'] = mtd_flow_display['pct_change'].apply(format_pct)
 
 # Sort by current_mtd descending
@@ -1065,8 +1109,50 @@ fig_mtd2.update_layout(
 
 fig_mtd2.data[0].header.fill.color = '#667eea'
 
-# MTD Table 3: Funnel Comparison
-mtd_funnel_display = df_mtd_funnel.copy()
+# Build MTD Funnel comparison from funnel data
+def calc_funnel_metrics(funnel_df):
+    """Calculate key funnel metrics"""
+    return {
+        'logged_in': funnel_df['logged_in_flag'].sum() if len(funnel_df) > 0 else 0,
+        'attended': funnel_df['attended_flag'].sum() if len(funnel_df) > 0 else 0,
+        'attempted': funnel_df['attempted_flag'].sum() if len(funnel_df) > 0 else 0,
+        'closed': funnel_df['closed_flag'].sum() if len(funnel_df) > 0 else 0,
+    }
+
+mtd_funnel_metrics = calc_funnel_metrics(mtd_funnel)
+lmtd_funnel_metrics = calc_funnel_metrics(lmtd_funnel)
+
+mtd_funnel_data = [
+    {
+        'metric': 'Logged In',
+        'current_mtd': mtd_funnel_metrics['logged_in'],
+        'last_mtd': lmtd_funnel_metrics['logged_in'],
+        'change': mtd_funnel_metrics['logged_in'] - lmtd_funnel_metrics['logged_in'],
+        'pct_change': ((mtd_funnel_metrics['logged_in'] - lmtd_funnel_metrics['logged_in']) / lmtd_funnel_metrics['logged_in'] * 100) if lmtd_funnel_metrics['logged_in'] > 0 else 0
+    },
+    {
+        'metric': 'Attended',
+        'current_mtd': mtd_funnel_metrics['attended'],
+        'last_mtd': lmtd_funnel_metrics['attended'],
+        'change': mtd_funnel_metrics['attended'] - lmtd_funnel_metrics['attended'],
+        'pct_change': ((mtd_funnel_metrics['attended'] - lmtd_funnel_metrics['attended']) / lmtd_funnel_metrics['attended'] * 100) if lmtd_funnel_metrics['attended'] > 0 else 0
+    },
+    {
+        'metric': 'Attempted',
+        'current_mtd': mtd_funnel_metrics['attempted'],
+        'last_mtd': lmtd_funnel_metrics['attempted'],
+        'change': mtd_funnel_metrics['attempted'] - lmtd_funnel_metrics['attempted'],
+        'pct_change': ((mtd_funnel_metrics['attempted'] - lmtd_funnel_metrics['attempted']) / lmtd_funnel_metrics['attempted'] * 100) if lmtd_funnel_metrics['attempted'] > 0 else 0
+    },
+    {
+        'metric': 'Closed',
+        'current_mtd': mtd_funnel_metrics['closed'],
+        'last_mtd': lmtd_funnel_metrics['closed'],
+        'change': mtd_funnel_metrics['closed'] - lmtd_funnel_metrics['closed'],
+        'pct_change': ((mtd_funnel_metrics['closed'] - lmtd_funnel_metrics['closed']) / lmtd_funnel_metrics['closed'] * 100) if lmtd_funnel_metrics['closed'] > 0 else 0
+    }
+]
+mtd_funnel_display = pd.DataFrame(mtd_funnel_data)
 mtd_funnel_display['pct_change_display'] = mtd_funnel_display['pct_change'].apply(format_pct)
 
 fig_mtd3 = go.Figure(data=[go.Table(
