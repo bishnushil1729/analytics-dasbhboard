@@ -12,7 +12,7 @@ import os
 TRINO_HOST = 'trino-dev-gateway-router-looker.de.razorpay.com'
 TRINO_PORT = 443
 TRINO_USER = 'duvvuri.praveen@razorpay.com'
-TRINO_PASSWORD = os.environ.get('TRINO_PASSWORD', '***REMOVED***')  # Use env var if available
+TRINO_PASSWORD = os.environ.get('TRINO_PASSWORD')  # Use env var if available
 TRINO_CATALOG = 'hive'
 TRINO_SCHEMA = 'aggregate_pa'
 

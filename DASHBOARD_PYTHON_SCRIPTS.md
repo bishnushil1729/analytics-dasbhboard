@@ -283,7 +283,7 @@ MONTHS_TO_FETCH = 6  # Change to 3, 12, etc.
 TRINO_HOST = 'trino-dev-gateway-router-looker.de.razorpay.com'
 TRINO_PORT = 443
 TRINO_USER = 'duvvuri.praveen@razorpay.com'
-TRINO_PASSWORD = os.environ.get('TRINO_PASSWORD', '***REMOVED***')
+TRINO_PASSWORD = os.environ.get('TRINO_PASSWORD')  # Set via environment variable
 ```
 
 ### **3. Change Default Granularity (simple_daily_dashboard_interactive.py)**

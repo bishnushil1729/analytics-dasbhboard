@@ -79,7 +79,7 @@ git push -u origin main
 2. Click "New repository secret"
 3. Add:
    - **Name:** `TRINO_PASSWORD`
-   - **Value:** `***REMOVED***`
+   - **Value:** *(Use the secure password from Razorpay internal docs)*
 
 ### Step 3: Enable GitHub Pages
 

@@ -13,7 +13,7 @@ from datetime import datetime, timedelta
 TRINO_HOST = 'trino-dev-gateway-router-looker.de.razorpay.com'
 TRINO_PORT = 443
 TRINO_USER = 'duvvuri.praveen@razorpay.com'
-TRINO_PASSWORD = os.environ.get('TRINO_PASSWORD', '***REMOVED***')
+TRINO_PASSWORD = os.environ.get('TRINO_PASSWORD')
 TRINO_CATALOG = 'hive'
 TRINO_SCHEMA = 'aggregate_pa'
 
